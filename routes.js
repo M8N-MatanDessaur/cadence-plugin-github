@@ -35,6 +35,57 @@ async function __attentionHandler(req, res, url, compute) {
 function __json(res, data) { res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(data)); }
 
 module.exports = function register(ctx) {
+  // The @gh handle's search: "@gh login bug" in the palette, or an Ask Cadence question about
+  // something, arrives here and is answered in the shape every handle shares. A number is a
+  // pattern hit and never reaches this; words go to GitHub's search across every configured
+  // repository that has a GitHub remote, so the answer says which repository each thing is in.
+  // GET /api/plugins/github/search?q=<text>&limit=8&kinds=pull-request,issue
+  async function handleSearch(req, res, url) {
+    try {
+      const q = String(url.searchParams.get('q') || '').trim();
+      const limit = Math.max(1, Math.min(25, Number(url.searchParams.get('limit')) || 8));
+      const kinds = String(url.searchParams.get('kinds') || '').split(',').map(s => s.trim()).filter(Boolean);
+      const wants = (k) => !kinds.length || kinds.includes(k);
+      if (!q || /^#?\d+$/.test(q)) return json(res, { items: [] });
+      const cfg = ctx.getConfig();
+      // Which configured repositories live on GitHub, and under what name here.
+      const known = [];
+      for (const name of Object.keys(cfg.Repos || {})) {
+        const p = getRepoPath(name);
+        const gh = p ? parseGitHubRemote(p) : null;
+        if (gh) known.push({ name, owner: gh.owner, repo: gh.repo });
+      }
+      const items = [];
+      if (wants('repo')) {
+        for (const k of known) {
+          if (`${k.name} ${k.owner}/${k.repo}`.toLowerCase().includes(q.toLowerCase())) {
+            items.push({ kind: 'repo', id: k.name, label: k.name, detail: `${k.owner}/${k.repo}`, open: { surface: 'github', target: { repo: k.name } }, score: 0.6 });
+          }
+        }
+      }
+      if ((wants('pull-request') || wants('issue')) && known.length) {
+        const scope = known.slice(0, 10).map(k => `repo:${k.owner}/${k.repo}`).join(' ');
+        const only = wants('pull-request') && !wants('issue') ? ' is:pr' : !wants('pull-request') && wants('issue') ? ' is:issue' : '';
+        const data = await ghRequest('GET', `/search/issues?q=${encodeURIComponent(`${q} ${scope}${only}`)}&per_page=${limit}&sort=updated`);
+        for (const it of (data.items || [])) {
+          const full = String(it.repository_url || '').replace(/^.*\/repos\//, '');
+          const k = known.find(x => `${x.owner}/${x.repo}`.toLowerCase() === full.toLowerCase());
+          const isPr = !!it.pull_request;
+          items.push({
+            kind: isPr ? 'pull-request' : 'issue',
+            id: String(it.number),
+            label: `#${it.number} ${it.title}`,
+            detail: [k ? k.name : full, it.state, it.user && it.user.login].filter(Boolean).join(' - '),
+            open: { surface: 'github', target: { [isPr ? 'pull' : 'issue']: String(it.number), repo: k ? k.name : undefined } },
+            score: 0.7,
+          });
+        }
+      }
+      json(res, { items: items.slice(0, limit) });
+    } catch (e) { json(res, { error: e.message }, /not configured/i.test(e.message) ? 400 : 502); }
+  }
+  ctx.addRoute('GET', '/search', (req, res, url) => handleSearch(req, res, url));
+
   ctx.addRoute('GET', '/attention', (req, res, url) => __attentionHandler(req, res, url, async (req) => { const r = await __selfGet(req, '/api/github/review-requests', 60000); const n = r && Array.isArray(r.items) ? r.items.length : 0; return n ? [{ level: 'warn', text: `${n} pull request${n === 1 ? '' : 's'} wait${n === 1 ? 's' : ''} for your review.` }] : []; }));
   const { shell } = ctx;
   const { https, fs, path, gitExec, sanitizeText, permGate, getRepoPath } = shell;

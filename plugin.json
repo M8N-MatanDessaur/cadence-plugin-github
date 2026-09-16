@@ -597,6 +597,45 @@
           }
         ]
       }
-    ]
+    ],
+    "handle": {
+      "name": "gh",
+      "aliases": [
+        "github",
+        "pr",
+        "pull"
+      ],
+      "description": "GitHub: a pull request or issue by number, or a search across pull requests, issues and repositories",
+      "placeholder": "a number (#123), or words to search for",
+      "resolve": [
+        {
+          "pattern": "^(?:PR|pr)?[ ]*#?([0-9]+)$",
+          "kind": "pull-request",
+          "label": "Pull request or issue #{1}",
+          "detail": "GitHub, in the repository the GitHub screen is on",
+          "open": {
+            "surface": "github",
+            "target": {
+              "pull": "{1}"
+            }
+          }
+        }
+      ],
+      "search": {
+        "route": "/search",
+        "minChars": 2,
+        "kinds": [
+          "pull-request",
+          "issue",
+          "repo"
+        ]
+      },
+      "fallback": {
+        "surface": "github",
+        "target": {
+          "query": "{text}"
+        }
+      }
+    }
   }
 }
