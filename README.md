@@ -1,14 +1,14 @@
-# GitHub Plugin for Symphonee
+# GitHub Plugin for Cadence
 
-Integrates GitHub into Symphonee: pull requests, reviews, cloning, and the git log sidebar.
+Integrates GitHub into Cadence: pull requests, reviews, cloning, and the git log sidebar.
 
 ## Installation
 
-1. Clone into your Symphonee plugins folder:
+1. Clone into your Cadence plugins folder:
    ```
-   git clone https://github.com/M8N-MatanDessaur/symphonee-plugin-github.git dashboard/plugins/github
+   git clone https://github.com/M8N-MatanDessaur/cadence-plugin-github.git dashboard/plugins/github
    ```
-2. Restart Symphonee.
+2. Restart Cadence.
 3. Open **Settings -> Plugins -> GitHub** and paste your Personal Access Token (classic, `repo` scope).
 
 ## What it contributes

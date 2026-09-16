@@ -1,15 +1,18 @@
 <#
 .SYNOPSIS
-    Pushes the current branch and opens a pull request in one step.
+    Creates a release on a tag (created on the target if it does not exist yet).
 .EXAMPLE
-    ./scripts/Push-AndPR.ps1 -Repo "MyRepo" -Title "Fix login"
+    ./scripts/New-Release.ps1 -Repo "MyRepo" -Tag v1.3.0 -Name "1.3.0" -Body "..." -Draft
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$Repo,
-    [Parameter(Mandatory)][string]$Title,
-    [string]$Description = '',
-    [string]$TargetBranch
+    [Parameter(Mandatory)][string]$Tag,
+    [string]$Name,
+    [string]$Body = '',
+    [string]$Target,
+    [switch]$Draft,
+    [switch]$Prerelease
 )
 $ErrorActionPreference = 'Stop'
 $CadenceApi = if ($env:CADENCE_API) { $env:CADENCE_API } else { 'http://127.0.0.1:3800' }
@@ -20,6 +23,7 @@ function Post-Api($path, $payload) { Invoke-RestMethod -Uri "$CadenceApi$path" -
 function Esc($s) { [uri]::EscapeDataString([string]$s) }
 # Arrays always print as JSON arrays, an empty one included, so a caller can parse the output blindly.
 function Out-Json($o, $d = 6) { ConvertTo-Json -InputObject $o -Depth $d }
-$payload = @{ repo = $Repo; title = $Title; body = $Description; push = $true }
-if ($TargetBranch) { $payload.base = $TargetBranch }
-Post-Api '/api/github/pulls/create' $payload | ConvertTo-Json
+$payload = @{ repo = $Repo; tag = $Tag; body = $Body; draft = [bool]$Draft; prerelease = [bool]$Prerelease }
+if ($Name) { $payload.name = $Name }
+if ($Target) { $payload.target = $Target }
+Post-Api '/api/github/releases/create' $payload | ConvertTo-Json

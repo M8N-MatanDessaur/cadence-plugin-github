@@ -1,8 +1,8 @@
 {
   "id": "github",
   "name": "GitHub",
-  "version": "0.6.1",
-  "sdkVersion": 2,
+  "version": "0.6.2",
+  "sdkVersion": 3,
   "description": "GitHub integration: repositories, pull requests, reviews, cloning, git log",
   "icon": "github",
   "tint": "110, 125, 170",
@@ -43,7 +43,10 @@
         "icon": "git-pull-request",
         "pinned": true,
         "position": 4,
-        "claims": { "tabBtnId": "prsTabBtn", "panelId": "panel-prs" },
+        "claims": {
+          "tabBtnId": "prsTabBtn",
+          "panelId": "panel-prs"
+        },
         "openable": true
       }
     ],
@@ -82,7 +85,517 @@
         "label": "Git Log",
         "pinned": true,
         "position": 2,
-        "claims": { "tabBtnId": "intelTab-gitlog", "panelId": "ipanel-gitlog" }
+        "claims": {
+          "tabBtnId": "intelTab-gitlog",
+          "panelId": "ipanel-gitlog"
+        }
+      }
+    ],
+    "surfaces": [
+      {
+        "id": "github",
+        "title": "GitHub",
+        "icon": "pr",
+        "mount": "rail",
+        "entry": "ui/github.js",
+        "sidebar": true,
+        "aside": true,
+        "description": "Pull requests, reviews, checks, AI review and summaries, repos to clone."
+      }
+    ],
+    "scripts": [
+      {
+        "file": "Get-Me.ps1",
+        "label": "Who am I",
+        "description": "The GitHub account behind the configured token.",
+        "args": []
+      },
+      {
+        "file": "Get-ReviewRequests.ps1",
+        "label": "Awaiting my review",
+        "description": "Open pull requests, on any repository, that ask for your review.",
+        "args": []
+      },
+      {
+        "file": "Get-PullRequests.ps1",
+        "label": "List pull requests",
+        "description": "Open (or closed, or all) pull requests of a repository.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "State",
+            "label": "open | closed | all",
+            "default": "open"
+          }
+        ]
+      },
+      {
+        "file": "Get-PullRequest.ps1",
+        "label": "Read a pull request",
+        "description": "Everything about one pull request: detail, files, commits, checks, timeline, diff.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Number",
+            "label": "PR number"
+          }
+        ]
+      },
+      {
+        "file": "Get-PullRequestDiff.ps1",
+        "label": "Diff of a pull request",
+        "description": "The unified diff of a pull request, as plain text.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Number",
+            "label": "PR number"
+          }
+        ]
+      },
+      {
+        "file": "Add-PullRequestComment.ps1",
+        "label": "Comment on a pull request",
+        "description": "Posts a comment on a pull request.",
+        "mutates": true,
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Number",
+            "label": "PR number"
+          },
+          {
+            "name": "Body",
+            "label": "Comment"
+          }
+        ]
+      },
+      {
+        "file": "Review-PullRequest.ps1",
+        "label": "Review a pull request",
+        "description": "Approve, request changes or comment, with a body and optional inline comments.",
+        "mutates": true,
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Number",
+            "label": "PR number"
+          },
+          {
+            "name": "Event",
+            "label": "APPROVE | REQUEST_CHANGES | COMMENT",
+            "default": "COMMENT"
+          },
+          {
+            "name": "Body",
+            "label": "Review text",
+            "default": ""
+          }
+        ]
+      },
+      {
+        "file": "Update-PullRequest.ps1",
+        "label": "Edit a pull request",
+        "description": "Title, body, base, state, labels, assignees, reviewers.",
+        "mutates": true,
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Number",
+            "label": "PR number"
+          }
+        ]
+      },
+      {
+        "file": "Merge-PullRequest.ps1",
+        "label": "Merge a pull request",
+        "description": "Merges a pull request (squash by default).",
+        "mutates": true,
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Number",
+            "label": "PR number"
+          },
+          {
+            "name": "Method",
+            "label": "squash | merge | rebase",
+            "default": "squash"
+          }
+        ]
+      },
+      {
+        "file": "Get-Branches.ps1",
+        "label": "List branches",
+        "description": "Branches on GitHub, the default one, and the local branch state.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          }
+        ]
+      },
+      {
+        "file": "New-PullRequest.ps1",
+        "label": "Create a pull request",
+        "description": "Opens a PR for the current branch; can push first, set reviewers and labels.",
+        "mutates": true,
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Title",
+            "label": "Title"
+          },
+          {
+            "name": "Description",
+            "label": "Description",
+            "default": ""
+          },
+          {
+            "name": "TargetBranch",
+            "label": "Target branch",
+            "default": ""
+          }
+        ]
+      },
+      {
+        "file": "Push-AndPR.ps1",
+        "label": "Push and open a PR",
+        "description": "Pushes the current branch and opens a PR in one step.",
+        "mutates": true,
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Title",
+            "label": "Title"
+          }
+        ]
+      },
+      {
+        "file": "Get-PullRequestChecks.ps1",
+        "label": "Checks of a pull request",
+        "description": "Checks and statuses on the head commit of a pull request.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Number",
+            "label": "PR number"
+          }
+        ]
+      },
+      {
+        "file": "Get-Issues.ps1",
+        "label": "List issues",
+        "description": "Open (or closed, or all) issues of a repository; filter by labels or assignee.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "State",
+            "label": "open | closed | all",
+            "default": "open"
+          }
+        ]
+      },
+      {
+        "file": "Get-Issue.ps1",
+        "label": "Read an issue",
+        "description": "One issue with its comments, linked pull requests and history.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Number",
+            "label": "Issue number"
+          }
+        ]
+      },
+      {
+        "file": "New-Issue.ps1",
+        "label": "Create an issue",
+        "description": "Opens an issue with a title, a body, labels and assignees.",
+        "mutates": true,
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Title",
+            "label": "Title"
+          },
+          {
+            "name": "Body",
+            "label": "Body",
+            "default": ""
+          },
+          {
+            "name": "Labels",
+            "label": "Labels (comma separated)",
+            "default": ""
+          }
+        ]
+      },
+      {
+        "file": "Add-IssueComment.ps1",
+        "label": "Comment on an issue",
+        "description": "Posts a comment on an issue.",
+        "mutates": true,
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Number",
+            "label": "Issue number"
+          },
+          {
+            "name": "Body",
+            "label": "Comment"
+          }
+        ]
+      },
+      {
+        "file": "Update-Issue.ps1",
+        "label": "Edit an issue",
+        "description": "State, title, body, labels, assignees.",
+        "mutates": true,
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Number",
+            "label": "Issue number"
+          }
+        ]
+      },
+      {
+        "file": "Start-Issue.ps1",
+        "label": "Start working on an issue",
+        "description": "Cuts a branch named after the issue and assigns it to you.",
+        "mutates": true,
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Number",
+            "label": "Issue number"
+          }
+        ]
+      },
+      {
+        "file": "Get-Labels.ps1",
+        "label": "List labels",
+        "description": "The labels a repository uses.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          }
+        ]
+      },
+      {
+        "file": "Get-Collaborators.ps1",
+        "label": "List collaborators",
+        "description": "Who can be assigned or asked to review on a repository.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          }
+        ]
+      },
+      {
+        "file": "Get-Activity.ps1",
+        "label": "Recent activity",
+        "description": "Commits and events on a repository over the last days.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Days",
+            "label": "Days back",
+            "default": "14"
+          }
+        ]
+      },
+      {
+        "file": "Get-Team.ps1",
+        "label": "The team",
+        "description": "Who works on a repository and how much, over 30 days.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          }
+        ]
+      },
+      {
+        "file": "Get-ActionRuns.ps1",
+        "label": "List workflow runs",
+        "description": "Recent GitHub Actions runs, optionally on one branch.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Branch",
+            "label": "Branch",
+            "default": ""
+          }
+        ]
+      },
+      {
+        "file": "Get-ActionRun.ps1",
+        "label": "Read a workflow run",
+        "description": "Jobs, steps and the failing logs of one Actions run.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Id",
+            "label": "Run id"
+          }
+        ]
+      },
+      {
+        "file": "Restart-ActionRun.ps1",
+        "label": "Re-run a workflow",
+        "description": "Re-runs an Actions run, or only its failed jobs.",
+        "mutates": true,
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Id",
+            "label": "Run id"
+          }
+        ]
+      },
+      {
+        "file": "Get-Releases.ps1",
+        "label": "List releases",
+        "description": "Releases and tags of a repository.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          }
+        ]
+      },
+      {
+        "file": "Get-ReleaseDelta.ps1",
+        "label": "What goes in the next release",
+        "description": "Commits and PRs since a tag, for release notes.",
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "From",
+            "label": "From tag",
+            "default": ""
+          }
+        ]
+      },
+      {
+        "file": "New-Release.ps1",
+        "label": "Create a release",
+        "description": "A release on a tag, with notes; draft or prerelease if asked.",
+        "mutates": true,
+        "args": [
+          {
+            "name": "Repo",
+            "label": "Repository"
+          },
+          {
+            "name": "Tag",
+            "label": "Tag"
+          },
+          {
+            "name": "Name",
+            "label": "Name",
+            "default": ""
+          }
+        ]
+      },
+      {
+        "file": "Get-Notifications.ps1",
+        "label": "My inbox",
+        "description": "Unread GitHub notifications.",
+        "args": []
+      },
+      {
+        "file": "Clear-Notifications.ps1",
+        "label": "Mark notifications read",
+        "description": "Marks one thread or all of them read.",
+        "mutates": true,
+        "args": [
+          {
+            "name": "Id",
+            "label": "Thread id",
+            "default": ""
+          }
+        ]
+      },
+      {
+        "file": "Get-UserRepos.ps1",
+        "label": "My GitHub repositories",
+        "description": "Repositories the token can see on GitHub.",
+        "args": [
+          {
+            "name": "Query",
+            "label": "Filter",
+            "default": ""
+          }
+        ]
       }
     ]
   }

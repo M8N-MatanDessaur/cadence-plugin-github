@@ -1,15 +1,14 @@
 <#
 .SYNOPSIS
-    Pushes the current branch and opens a pull request in one step.
+    One pull request: detail, files, commits, checks, timeline, and its unified diff.
 .EXAMPLE
-    ./scripts/Push-AndPR.ps1 -Repo "MyRepo" -Title "Fix login"
+    ./scripts/Get-PullRequest.ps1 -Repo "MyRepo" -Number 42 -NoDiff
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$Repo,
-    [Parameter(Mandatory)][string]$Title,
-    [string]$Description = '',
-    [string]$TargetBranch
+    [Parameter(Mandatory)][int]$Number,
+    [switch]$NoDiff
 )
 $ErrorActionPreference = 'Stop'
 $CadenceApi = if ($env:CADENCE_API) { $env:CADENCE_API } else { 'http://127.0.0.1:3800' }
@@ -20,6 +19,13 @@ function Post-Api($path, $payload) { Invoke-RestMethod -Uri "$CadenceApi$path" -
 function Esc($s) { [uri]::EscapeDataString([string]$s) }
 # Arrays always print as JSON arrays, an empty one included, so a caller can parse the output blindly.
 function Out-Json($o, $d = 6) { ConvertTo-Json -InputObject $o -Depth $d }
-$payload = @{ repo = $Repo; title = $Title; body = $Description; push = $true }
-if ($TargetBranch) { $payload.base = $TargetBranch }
-Post-Api '/api/github/pulls/create' $payload | ConvertTo-Json
+$q = "repo=$(Esc $Repo)&number=$Number"
+$out = [ordered]@{
+  detail   = Get-Api "/api/github/pulls/detail?$q"
+  files    = (Get-Api "/api/github/pulls/files?$q").files
+  commits  = (Get-Api "/api/github/pulls/commits?$q").commits
+  checks   = Get-Api "/api/github/pulls/checks?$q"
+  timeline = (Get-Api "/api/github/pulls/timeline?$q").timeline
+}
+if (-not $NoDiff) { $d = Get-Api "/api/github/pulls/diff?$q"; $out.diff = $d.diff; $out.truncated = $d.truncated }
+[pscustomobject]$out | ConvertTo-Json -Depth 8
