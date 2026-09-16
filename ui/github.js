@@ -167,6 +167,25 @@ function GitHub({ host }) {
   const issueMatches = (i) => !q.trim() || `${i.number} ${i.title} ${i.author} ${(i.assignees || []).join(' ')} ${(i.labels || []).map((l) => l.name).join(' ')}`.toLowerCase().includes(q.trim().toLowerCase());
   const shownIssues = (issues || []).filter(issueMatches);
   const leave = () => { setOpenNumber(null); setOpenIssue(null); setNewIssue(false); setOpenRun(null); setNewPr(false); setNewRelease(null); };
+
+  // ---------------------------------------------------------------- opened AT something
+  // "@gh 123" in the palette, a pull request a CLI resolved, a search hit: the app opens
+  // this surface with a target and says so again whenever it changes while the screen is
+  // up. { pull, repo? } lands on that pull request, { issue, repo? } on that issue,
+  // { repo } switches repository, { query } filters the pull requests to those words.
+  const landOn = useCallback((target) => {
+    if (!target) return;
+    if (target.repo && repos.some((r) => r.name === target.repo)) setRepo(String(target.repo));
+    if (target.pull) { leave(); setOpenNumber(Number(target.pull)); return; }
+    if (target.issue) { leave(); setOpenIssue(Number(target.issue)); return; }
+    if (target.query) { leave(); setQ(String(target.query)); setTab('pulls'); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repos]);
+  useEffect(() => {
+    if (!host.target || !host.onTarget) return;
+    landOn(host.target());
+    return host.onTarget(landOn);
+  }, [host, landOn]);
   const repoPath = (repos.find((r) => r.name === repo) || {}).path || null;
 
   // ---------------------------------------------------------------- sidebar
