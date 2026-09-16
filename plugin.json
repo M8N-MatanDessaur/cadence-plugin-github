@@ -618,7 +618,8 @@
             "target": {
               "pull": "{1}"
             }
-          }
+          },
+          "mention": "\\b(?:PR|GH) ?#([0-9]+)\\b"
         }
       ],
       "search": {
