@@ -1,7 +1,7 @@
 {
   "id": "github",
   "name": "GitHub",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "sdkVersion": 3,
   "description": "GitHub integration: repositories, pull requests, reviews, cloning, git log",
   "icon": "github",
