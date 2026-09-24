@@ -93,12 +93,33 @@ module.exports = function register(ctx) {
 
   // --- Helpers -------------------------------------------------------------
 
-  function parseGitHubRemote(repoPath) {
+  // Which GitHub repository a folder is. Asked for every configured repository on every search,
+  // so it reads .git/config (a file, not a git process per repository - 41 of those blocked the
+  // whole server for over two seconds a question) and remembers the answer for five minutes.
+  // A worktree or an unreadable config still asks git.
+  const remoteCache = new Map();
+  const REMOTE_TTL_MS = 5 * 60 * 1000;
+  function originFromConfig(repoPath) {
+    const fs = require('fs');
+    const path = require('path');
     try {
-      const url = gitExec(repoPath, 'remote get-url origin');
-      const m = url.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
-      return m ? { owner: m[1], repo: m[2] } : null;
-    } catch (_) { return null; }
+      const dotGit = path.join(repoPath, '.git');
+      if (!fs.statSync(dotGit).isDirectory()) return undefined;
+      const cfg = fs.readFileSync(path.join(dotGit, 'config'), 'utf8');
+      const section = cfg.match(/\[remote "origin"\]([\s\S]*?)(?=\n\s*\[|$)/);
+      const url = section && section[1].match(/^\s*url\s*=\s*(.+)$/m);
+      return url ? url[1].trim() : null;
+    } catch (_) { return undefined; }
+  }
+  function parseGitHubRemote(repoPath) {
+    const hit = remoteCache.get(repoPath);
+    if (hit && Date.now() - hit.at < REMOTE_TTL_MS) return hit.value;
+    let url = originFromConfig(repoPath);
+    if (url === undefined) { try { url = gitExec(repoPath, 'remote get-url origin'); } catch (_) { url = null; } }
+    const m = url ? url.match(/github\.com[:/]([^/]+)\/([^/.]+)/) : null;
+    const value = m ? { owner: m[1], repo: m[2] } : null;
+    remoteCache.set(repoPath, { at: Date.now(), value });
+    return value;
   }
 
   function resolveGitHub(repoName) {
